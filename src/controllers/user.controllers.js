@@ -343,7 +343,7 @@ const updateUserAvatar = asyncHandler( async (req,res) => {
         {new:true}
     ).select("-password -refreshToken")
 
-    res.status(200).json(new ApiResponse(200,user,"Avatar updated successfully"))
+   return res.status(200).json(new ApiResponse(200,user,"Avatar updated successfully"))
 })
 
 const updateUserCoverImage = asyncHandler( async (req,res) => {
@@ -369,7 +369,7 @@ const updateUserCoverImage = asyncHandler( async (req,res) => {
         {new:true}
     ).select("-password -refreshToken")
 
-    res.status(200).json(new ApiResponse(200,user,"Cover Image updated successfully"))
+   return res.status(200).json(new ApiResponse(200,user,"Cover Image updated successfully"))
 })
 
 const getUserChanelProfile = asyncHandler( async( req, res ) =>{

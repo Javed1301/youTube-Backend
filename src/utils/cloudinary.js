@@ -38,4 +38,11 @@ const deleteFromCloudinary = async (publicId) => {
     }
 }
 
-export {uploadOnCloudinary , deleteFromCloudinary}
+const extractPublicId = (cloudinaryUrl) => {
+    if (!cloudinaryUrl) return null;
+    const splitted = cloudinaryUrl.split('/');
+    const lastPart = splitted[splitted.length - 1];
+    return lastPart.split('.')[0];
+}
+
+export {uploadOnCloudinary , deleteFromCloudinary , extractPublicId}
