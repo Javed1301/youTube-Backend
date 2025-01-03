@@ -6,11 +6,45 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {deleteFromCloudinary, uploadOnCloudinary , extractPublicId} from "../utils/cloudinary.js"
 
-
+// This controller method is written by Ai Capilot , Need to be studied
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
-})
+    const { page = 1, limit = 10, query, sortBy = 'createdAt', sortType = 'desc', userId } = req.query;
+
+    // Build the filter object based on query and userId
+    const filter = {};
+    if (query) {
+        filter.$or = [
+            { title: { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } }
+        ];
+    }
+    if (userId) {
+        filter.owner = userId;
+    }
+
+    // Calculate the number of documents to skip
+    const skip = (page - 1) * limit;
+
+    // Fetch the videos from the database
+    const videos = await Video.find(filter)
+        .sort({ [sortBy]: sortType === 'asc' ? 1 : -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    // Get the total count of videos matching the filter
+    const totalVideos = await Video.countDocuments(filter);
+
+    // Respond with the videos and pagination info
+    return res.status(200).json(new ApiResponse(200, {
+        videos,
+        pagination: {
+            total: totalVideos,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(totalVideos / limit)
+        }
+    }, "Videos fetched successfully"));
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
     
@@ -89,8 +123,19 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: get video by id
 
+    if(!videoId) {
+        throw new ApiError(402,"didn't get the videro Id form request")
+    }
+    //TODO: get video by id
+    const video = await Video.findById(videoId)
+    if(!video){
+        throw new ApiError (500,"Video is not available in data base")
+    }
+
+    return res
+            .status(201)
+            .json(new ApiResponse(200,video,"video fetched successfully"))
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
@@ -146,11 +191,69 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: delete video
+
+    if(!videoId) {
+        throw new ApiError(402,"didn't get the videro Id form request")
+    }
+    //TODO: delete video by id
+    const video = await Video.findById(videoId)
+    if(!video){
+        throw new ApiError (500,"Video is not available in data base")
+    }
+
+    //verify the owner of the video.
+    if(String(video.owner) != String(req.user._id)){
+        throw new ApiError(403,"Youu are not allowed to delete this video")
+    }
+    //deleting video from cloudinary
+
+    if(video.thumbnail){
+        const deleteThumbnail = extractPublicId(video.thumbnail);
+        await deleteFromCloudinary(deleteThumbnail);
+    }
+    if(video.videoFile){
+        const deleteVideoFile = extractPublicId(video.videoFile);
+        await deleteFromCloudinary(deleteVideoFile);
+    }
+    
+    //deleting video from database
+    const deletedVideo = await Video.findByIdAndDelete(videoId);
+
+    if(!deleteVideo){
+        throw new ApiError(404,"Video is not found in the dataBase, So can't be deleted")
+    }
+
+    
+   
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200,deleteVideo,"Video is deleted successfully"))
+
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    if(!videoId){
+        throw new ApiError(404,"Didn't get the video Id")
+    }
+
+    const video = await Video.findById(videoId)
+
+    if(!video){
+        throw new ApiError(500,"Video is not found in data base")
+    }
+
+    video.isPublished = !video.isPublished;
+
+    // console.log(`isPublished : ${video.isPublished}`)
+    await video.save();
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200,{"isPublished" : video.isPublished},"Publish status toggled"))
+
 })
 
 export {
