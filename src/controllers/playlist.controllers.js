@@ -44,7 +44,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         },
         { 
             $lookup: {
-                from: "User", // Confirm exact collection name
+                from: "users", // Confirm exact collection name,if the model name is User then mongo db will create its plural with small letter.
                 localField: "owner",
                 foreignField: "_id",
                 as: "ownerDetails"
